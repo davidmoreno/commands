@@ -1,0 +1,14 @@
+#!/bin/sh
+
+if [ "$1" == "--one-line-help" ]; then
+	echo "Just an example"
+	exit 0
+fi
+
+if [ "$*" ]; then
+	echo "$*"
+else
+	echo "Hello world"
+fi
+
+
