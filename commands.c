@@ -183,6 +183,8 @@ int parse_configline(char *line){
 	char *comments=strchr(line, '#');
 	if (comments)
 		*comments=0;
+	if (strlen(line)==0)
+		return 0;
 	char *eq=strchr(line,'=');
 	*eq=0;
 
@@ -255,7 +257,11 @@ void parse_config(){
 }
 
 int main(int argc, char **argv){
+#ifdef DEFAULT_COMMANDS_PATH
+	setenv(COMMANDS_PATH, DEFAULT_COMMANDS_PATH, 1);
+#else
 	setenv(COMMANDS_PATH, secure_getenv("PATH"), 1);
+#endif
 	
 	command_name=basename( argv[0] );
 	command_name_length=strlen(command_name);

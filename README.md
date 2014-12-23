@@ -48,3 +48,9 @@ The config files can contain envvar variables as in bash: $VAR and ${VAR}.
   getent passwd | awk -F: '{ if ($7 == "/bin/bash") print $1; }'
 
 
+## Compile time configuration
+
+If these definitions are present, they may set default values:
+
+* *DEFAULT_COMMANDS_PATH* -- The search paths to look for commands, if not want a copy 
+  of PATH nor whatever is set at the config file.
