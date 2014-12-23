@@ -49,7 +49,7 @@ void list_subcommands_at_dir(void *_, const char *dirname){
 	while (n--) {
 		const char *subcommand=namelist[n]->d_name;
 		snprintf(tmp, sizeof(tmp), "%s/%s --one-line-help", dirname, subcommand);
-		printf("  %s - ", subcommand+command_name_length+1);
+		printf("  %8s - ", subcommand+command_name_length+1);
 		fflush(stdout);
 		system(tmp);
 		
@@ -276,6 +276,12 @@ int main(int argc, char **argv){
 		printf("\n");
 	}
 	else{
+#ifdef ONE_LINE_HELP
+			if (strcmp(argv[1], "--one-line-help")==0){
+				printf("%s\n", ONE_LINE_HELP);
+				return 0;
+			}
+#endif
 		const char *subcommand=argv[1];
 		argc--; argv++;
 		char *subcommand_path=find_command(subcommand);

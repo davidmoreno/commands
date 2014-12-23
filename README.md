@@ -52,5 +52,7 @@ The config files can contain envvar variables as in bash: $VAR and ${VAR}.
 
 If these definitions are present, they may set default values:
 
-* *DEFAULT_COMMANDS_PATH* -- The search paths to look for commands, if not want a copy 
+* **DEFAULT_COMMANDS_PATH** -- The search paths to look for commands, if not want a copy 
   of PATH nor whatever is set at the config file.
+* **ONE_LINE_HELP** -- Subcommands can be chained, but the --one-line-help must be 
+  provided for subcommands.
