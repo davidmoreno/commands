@@ -183,9 +183,11 @@ int parse_configline(char *line){
 	char *comments=strchr(line, '#');
 	if (comments)
 		*comments=0;
-	if (strlen(line)==0)
+	if (strlen(string_trim(line))==0)
 		return 0;
 	char *eq=strchr(line,'=');
+	if (!eq)
+		return 1;
 	*eq=0;
 
 	const char *key=string_trim(line);
