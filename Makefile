@@ -1,6 +1,6 @@
 all: commands
 
-CFLAGS=-O2 -Wall -Werror
+CFLAGS=-O2 -Wall -Werror -D__DEBUG__ -g
 
 commands: commands.c
 

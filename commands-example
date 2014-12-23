@@ -12,3 +12,6 @@ else
 fi
 
 
+if [ "$TEST" ]; then
+	echo "Test is set"
+fi

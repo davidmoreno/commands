@@ -23,6 +23,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <ctype.h>
 
 char *command_name=NULL;
 size_t command_name_length=0;
@@ -56,8 +58,8 @@ void list_subcommands_at_dir(void *_, const char *dirname){
 	free(namelist);
 }
 
-int foreach_commands_path(void (*feach)(void *, const char *path), void *userdata){
-	char *paths=strdup(secure_getenv(COMMANDS_PATH));
+int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char *path), void *userdata){
+	char *paths=strdup(search_paths);;
 	char *path=paths;
 	while(*path){ // While some path left
 		char *next=strchr(path, ':');
@@ -78,7 +80,7 @@ int foreach_commands_path(void (*feach)(void *, const char *path), void *userdat
 }
 
 void list_subcommands(){
-	foreach_commands_path(list_subcommands_at_dir, NULL);
+	foreach_pathlist(getenv(COMMANDS_PATH), list_subcommands_at_dir, NULL);
 }
 
 struct find_command_t{
@@ -104,9 +106,152 @@ char *find_command(const char *subcommand){
 	userdata.subcommand=subcommand;
 	userdata.result=NULL;
 	
-	foreach_commands_path( find_command_filter, &userdata);
+	foreach_pathlist(getenv(COMMANDS_PATH), find_command_filter, &userdata);
 	
 	return userdata.result;
+}
+
+const char *string_trim(char *str){
+	// Trim start
+	while (*str && isspace(*str)){
+		str++;
+	}
+	
+	// Trim end
+	char *end=str+strlen(str);
+	while ( end>str && isspace(*end) ){
+		end--;
+	}
+	*end=0;
+	
+	return str;
+}
+
+char *string_envformat(const char *str){
+	size_t ressize=strlen(str)+512;
+	char *begin_res=malloc(ressize); // An estimation.. might be way wrong.
+	char *res=begin_res;
+	char *resend=res+ressize-1;
+	char tvarname[256];
+	char *varname=NULL;
+	
+	while(*str){
+		if (res>=resend){
+			goto end;
+		}
+		if (*str=='$'){
+			str++;
+			if (*str=='$'){
+				*res++='$';
+			}
+			else{
+				varname=tvarname;
+				*varname=*str;
+			}
+		}
+		if (varname){
+			if (isalnum(*str))
+				*varname++=*str;
+			else{
+				*varname=0;
+				char *env=getenv(tvarname);
+				strncpy(res, env, resend-res);
+				size_t lenv=strlen(env);
+				if (res+lenv>resend)
+					goto end;
+				res+=lenv;
+				varname=NULL;
+				*res++=*str;
+			}
+		}
+		else
+			*res++=*str;
+		str++;
+	}
+	if (varname){
+		*varname=0;
+		char *env=getenv(tvarname);
+		strncpy(res, env, resend-res);
+		res+=strlen(env);
+	}
+end:
+	*res=0;
+	return begin_res;
+}
+
+int parse_configline(char *line){
+	char *comments=strchr(line, '#');
+	if (comments)
+		*comments=0;
+	char *eq=strchr(line,'=');
+	*eq=0;
+
+	const char *key=string_trim(line);
+	const char *val=string_trim(eq+1);
+	char *final_val=string_envformat(val);	
+	
+// 	printf("<%s>=<%s>\n", key, final_val);
+	setenv(key, final_val, 1);
+	free(final_val);
+	return 0;
+}
+
+int parse_configfile(const char *filename){
+	int fd=open(filename, O_RDONLY);
+	if (fd<0)
+		return fd;
+	char tmp[1025];
+	char line[1024];
+	int nr;
+	int lineno=0;
+	while ( (nr=read(fd, tmp, sizeof(tmp)-1)) > 0){
+		tmp[nr]=0;
+// 		printf("Read block: <%s>\n", tmp);
+		if (nr<sizeof(tmp))
+			tmp[nr]=0; // EOF
+		char *where=tmp;
+		char *where_next=NULL;
+		*line=0;
+		while ( (where_next=strchr(where, '\n')) ){
+			lineno++;
+			*where_next='\0';
+			strncat(line, where, sizeof(line)-1);
+			
+			// Process the line
+			if (parse_configline(line)!=0)
+				goto error;
+			*line=0;
+			
+			where=where_next+1;
+		}
+		strncpy(line, where, tmp + sizeof(tmp) - where);
+		if (nr<sizeof(tmp)){
+			// Process the line
+			if (parse_configline(line)!=0)
+				goto error;
+		}
+	}
+	
+	close(fd);
+	return 0;
+error:
+	fprintf(stderr, "Error parsing config file %s:%d", filename, lineno);
+	close(fd);
+	return 1;
+}
+
+void parse_config(){
+	char tmp[256];
+	snprintf(tmp, sizeof(tmp), "/etc/%s", command_name);
+	parse_configfile(tmp);
+	snprintf(tmp, sizeof(tmp), "%s/.config/%s", getenv("HOME"), command_name);
+	parse_configfile(tmp);
+
+#ifdef __DEBUG__
+	snprintf(tmp, sizeof(tmp), "./%src", command_name);
+	parse_configfile(tmp);
+#endif
+
 }
 
 int main(int argc, char **argv){
@@ -114,11 +259,13 @@ int main(int argc, char **argv){
 	
 	command_name=basename( argv[0] );
 	command_name_length=strlen(command_name);
+	parse_config();
 	
 	if (argc==1){
-		printf("%s <subcommand>\n", command_name);
-		printf("Known subcommands are:\n\n");
+		printf("%s <subcommand> ...\n\n", command_name);
+		printf("Known subcommands are:\n");
 		list_subcommands();
+		printf("\n");
 	}
 	else{
 		const char *subcommand=argv[1];
