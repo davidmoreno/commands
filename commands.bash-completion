@@ -1,0 +1,17 @@
+_commands() 
+{
+	local cur prev opts
+	COMPREPLY=()
+	cur="${COMP_WORDS[COMP_CWORD]}"
+	prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+	if [ "$COMP_CWORD" == 1 ]; then
+		opts="--list $( ${COMP_WORDS[0]} --list )"
+		COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+	else
+		opts=$( ls -1d ${cur}* 2>/dev/null )
+		COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+	fi
+}
+complete -F _commands commands
+

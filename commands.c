@@ -91,7 +91,7 @@ void list_subcommands_oneline_help(const char *dirname, const char *subcommand){
 }
 
 void list_subcommands_list(const char *dirname, const char *subcommand){
-	printf("%s ", subcommand);
+	printf("%s ", subcommand+command_name_length+1);
 }
 
 void list_subcommands(list_subcommands_f flags){
