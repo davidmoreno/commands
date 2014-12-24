@@ -347,7 +347,6 @@ void list(){
  * @short Runs a specific subcommand, replacing current process (exec).
  */
 int run_command(const char *subcommand, int argc, char **argv){
-	argc--; argv++;
 	char *subcommand_path=find_command(subcommand);
 	if (!subcommand_path){
 		fprintf(stderr,"Command %s not found. Check available running %s without arguments.\n", subcommand, command_name);
@@ -374,6 +373,9 @@ int commands_main(int argc, char **argv){
 	
 	command_name=basename( argv[0] );
 	command_name_length=strlen(command_name);
+	
+	setenv("COMMANDS_NAME", command_name, 1);
+	
 	parse_config();
 	
 	if (argc==1){
@@ -382,10 +384,10 @@ int commands_main(int argc, char **argv){
 	}
 	else{
 #ifdef ONE_LINE_HELP
-			if (strcmp(argv[1], "--one-line-help")==0){
-				printf("%s\n", ONE_LINE_HELP);
-				return 0;
-			}
+		if (strcmp(argv[1], "--one-line-help")==0){
+			printf("%s\n", ONE_LINE_HELP);
+			return 0;
+		}
 #endif
 		if (strcmp(argv[1], "--list")==0){
 			list();

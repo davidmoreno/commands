@@ -59,3 +59,9 @@ If these definitions are present, they may set default values:
 * **ONE_LINE_HELP** -- Subcommands can be chained, but the --one-line-help must be 
   provided for subcommands.
 * **NO_MAIN** -- Does not compile default main, so it can be customized, calling commands_main or custom functions.
+
+## Environment vars
+
+Internally the following environment vars are set
+
+* **COMMANDS_NAME** The name of the commands, required by subcommands to know real name.
