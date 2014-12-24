@@ -105,9 +105,13 @@ void scandir_add_to_subcommandlist(void *l, const char *dirname){
 		perror("Cant scan dir in path: ");
 	}
 	char tmp[1024];
+	struct stat st;
 	while (n--) {
 		snprintf(tmp, sizeof(tmp), "%s/%s", dirname, namelist[n]->d_name);
-		subcommand_list_add(scl, namelist[n]->d_name+command_name_length+1, tmp);
+		if (stat(tmp, &st) >= 0){
+			if (st.st_mode & 0111) // Excutable for anybody.
+				subcommand_list_add(scl, namelist[n]->d_name+command_name_length+1, tmp);
+		}
 		free(namelist[n]);
 	}
 	free(namelist);
