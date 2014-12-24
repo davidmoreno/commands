@@ -33,6 +33,11 @@ char *command_name=NULL;
 size_t command_name_length=0;
 const char *COMMANDS_PATH="COMMANDS_PATH";
 
+typedef enum list_subcommands_f{
+	LS_LIST=1,
+	LS_ONE_LINE_HELP=2
+}list_subcommands_f;
+
 int scandir_startswith_command_name(const struct dirent *d){
 // 	printf("Check %s %d %s %ld\n",d->d_name, strncmp(d->d_name, command_name, command_name_length), command_name, command_name_length);
 	return 
@@ -41,21 +46,16 @@ int scandir_startswith_command_name(const struct dirent *d){
 		d->d_type&0111;
 }
 
-void list_subcommands_at_dir(void *_, const char *dirname){
+void list_subcommands_at_dir(void *f, const char *dirname){
+	void (*custom_print)(const char *dirname, const char *filename) = f;
 	struct dirent **namelist;
 
 	int n=scandir(dirname, &namelist, scandir_startswith_command_name, alphasort);
 	if (n<0){
 		perror("Cant scan dir in path: ");
 	}
-	char tmp[1024];
 	while (n--) {
-		const char *subcommand=namelist[n]->d_name;
-		snprintf(tmp, sizeof(tmp), "%s/%s --one-line-help", dirname, subcommand);
-		printf("  %8s - ", subcommand+command_name_length+1);
-		fflush(stdout);
-		system(tmp);
-		
+		custom_print(dirname, namelist[n]->d_name);
 		free(namelist[n]);
 	}
 	free(namelist);
@@ -82,8 +82,23 @@ int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char 
 	return 0;
 }
 
-void list_subcommands(){
-	foreach_pathlist(getenv(COMMANDS_PATH), list_subcommands_at_dir, NULL);
+void list_subcommands_oneline_help(const char *dirname, const char *subcommand){
+	char tmp[1024];
+	snprintf(tmp, sizeof(tmp), "%s/%s --one-line-help", dirname, subcommand);
+	printf("  %8s - ", subcommand+command_name_length+1);
+	fflush(stdout);
+	system(tmp);
+}
+
+void list_subcommands_list(const char *dirname, const char *subcommand){
+	printf("%s ", subcommand);
+}
+
+void list_subcommands(list_subcommands_f flags){
+	if (flags&LS_LIST)
+		foreach_pathlist(getenv(COMMANDS_PATH), list_subcommands_at_dir, list_subcommands_list);
+	else
+		foreach_pathlist(getenv(COMMANDS_PATH), list_subcommands_at_dir, list_subcommands_oneline_help);
 }
 
 struct find_command_t{
@@ -275,7 +290,7 @@ int main(int argc, char **argv){
 	if (argc==1){
 		printf("%s <subcommand> ...\n\n", command_name);
 		printf("Known subcommands are:\n");
-		list_subcommands();
+		list_subcommands(LS_ONE_LINE_HELP);
 		printf("\n");
 	}
 	else{
@@ -285,6 +300,11 @@ int main(int argc, char **argv){
 				return 0;
 			}
 #endif
+		if (strcmp(argv[1], "--list")==0){
+			list_subcommands(LS_LIST);
+			printf("\n");	
+			return 0;
+		}
 		const char *subcommand=argv[1];
 		argc--; argv++;
 		char *subcommand_path=find_command(subcommand);
