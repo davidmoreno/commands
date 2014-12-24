@@ -38,15 +38,17 @@ The config files can contain envvar variables as in bash: $VAR and ${VAR}.
 
 ## Example subcommand
 
-  #!/bin/bash
-  
-  if [ "$1" == "--one-line-help" ]; then
-    echo "List all users"
-    exit 1
-  fi
-  
-  getent passwd | awk -F: '{ if ($7 == "/bin/bash") print $1; }'
+List of users using bash acording to getent passwd:
 
+```bash
+#!/bin/bash
+if [ "$1" == "--one-line-help" ]; then
+  echo "List all users"
+  exit 1
+fi
+
+getent passwd | awk -F: '{ if ($7 == "/bin/bash") print $1; }'
+```
 
 ## Compile time configuration
 
