@@ -172,7 +172,9 @@ subcommand_t *subcommand_list_end(){
  */
 
 
-
+/**
+ * @{ @name string utils
+ */
 const char *string_trim(char *str){
 	// Trim start
 	while (*str && isspace(*str)){
@@ -189,6 +191,7 @@ const char *string_trim(char *str){
 	return str;
 }
 
+/// Returns a new string with env ($ENV) variables resolved.
 char *string_envformat(const char *str){
 	size_t ressize=strlen(str)+512;
 	char *begin_res=malloc(ressize); // An estimation.. might be way wrong.
@@ -240,8 +243,11 @@ end:
 	*res=0;
 	return begin_res;
 }
+/// @}
 
-int parse_configline(char *line){
+/// @{ @name Config management
+/// Parses a line of the config file
+int config_parse_line(char *line){
 	char *comments=strchr(line, '#');
 	if (comments)
 		*comments=0;
@@ -262,7 +268,7 @@ int parse_configline(char *line){
 	return 0;
 }
 
-int parse_configfile(const char *filename){
+int config_parse_file(const char *filename){
 	int fd=open(filename, O_RDONLY);
 	if (fd<0)
 		return fd;
@@ -284,7 +290,7 @@ int parse_configfile(const char *filename){
 			strncat(line, where, sizeof(line)-1);
 			
 			// Process the line
-			if (parse_configline(line)!=0)
+			if (config_parse_line(line)!=0)
 				goto error;
 			*line=0;
 			
@@ -293,7 +299,7 @@ int parse_configfile(const char *filename){
 		strncpy(line, where, tmp + sizeof(tmp) - where);
 		if (nr<sizeof(tmp)){
 			// Process the line
-			if (parse_configline(line)!=0)
+			if (config_parse_line(line)!=0)
 				goto error;
 		}
 	}
@@ -306,19 +312,24 @@ error:
 	return 1;
 }
 
-void parse_config(){
+/// Parses the config files
+void config_parse(){
 	char tmp[256];
 	snprintf(tmp, sizeof(tmp), "/etc/%s", command_name);
-	parse_configfile(tmp);
+	config_parse_file(tmp);
 	snprintf(tmp, sizeof(tmp), "%s/.config/%s", getenv("HOME"), command_name);
-	parse_configfile(tmp);
+	config_parse_file(tmp);
 
 #ifdef __DEBUG__
 	snprintf(tmp, sizeof(tmp), "./%src", command_name);
-	parse_configfile(tmp);
+	config_parse_file(tmp);
 #endif
 
 }
+
+/// @}
+
+/// @{ @name Public API
 
 char *find_command(const char *name){
 	char *ret=NULL;
@@ -354,8 +365,6 @@ void list_subcommands_one_line_help(){
 		system(tmp);
 	}
 }
-
-/**** PUBLIC API ****/
 
 /**
  * @short Shows the list of subcommands with the one line help of each.
@@ -411,7 +420,7 @@ int commands_main(int argc, char **argv){
 	
 	setenv("COMMANDS_NAME", command_name, 1);
 	
-	parse_config();
+	config_parse();
 	int retcode=0;
 	
 	if (argc==1){
@@ -442,6 +451,8 @@ int commands_main(int argc, char **argv){
 	subcommand_list_free(subcommandlist);
 	return retcode;
 }
+
+/// @}
 
 #ifndef NO_MAIN
 /**

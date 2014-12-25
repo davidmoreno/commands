@@ -64,7 +64,7 @@ int main(int argc, char **argv){
 	else
 		command_name=strdup(command_name);
 	command_name_length=strlen(command_name);
-	parse_config();
+	config_parse();
 	
 	int running=1;
 	char line[2048];
