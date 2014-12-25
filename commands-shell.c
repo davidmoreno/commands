@@ -53,12 +53,16 @@ int main(int argc, char **argv){
 	// Must be set at COMMANDS_NAME envvar.
 	command_name=getenv("COMMANDS_NAME");
 	if (!command_name){
-		command_name=strdup(argv[0]);
+		char *tmp=strdup(argv[0]);
+		command_name=strdup(basename(tmp));
+		free(tmp);
 		// Use first part of my own name
 		char *dash=strchr(command_name,'-');
 		if (dash)
 			*dash=0;
 	}
+	else
+		command_name=strdup(command_name);
 	command_name_length=strlen(command_name);
 	parse_config();
 	
@@ -107,5 +111,7 @@ int main(int argc, char **argv){
 		}
 	}
 	printf("\n");
+	subcommand_list_free();
+	free(command_name);
 	return 0;
 }
