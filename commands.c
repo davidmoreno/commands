@@ -45,21 +45,39 @@ typedef struct subcommand_list_t{
 	size_t size;
 }subcommand_list_t;
 
-int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char *path), void *userdata);
-subcommand_t *subcommand_list_add(subcommand_list_t *scl, const char *name, const char *fullpath);
-void scandir_add_to_subcommandlist(void *l, const char *dirname);
 
-subcommand_list_t *subcommand_list_new(){
+/// Global with all known subcommands. Global as i may be used several times in the same execution. ie: shell
+subcommand_list_t *subcommandlist=NULL;
+
+
+/**
+ * @{ @name Subcommands
+ * 
+ * Prepares the lists of subcommands
+ */
+subcommand_list_t *subcommand_list_new();
+int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char *path), void *userdata);
+subcommand_t *subcommand_list_add(const char *name, const char *fullpath);
+void scandir_add_to_subcommandlist(void *l, const char *dirname);
+subcommand_t *subcommand_list_begin();
+subcommand_t *subcommand_list_end();
+
+void subcommand_list_init(){
+	if (subcommandlist)
+		return;
 	subcommand_list_t *scl=malloc(sizeof(subcommand_list_t));
 	scl->count=0;
 	scl->size=8;
 	scl->list=malloc(sizeof(subcommand_t)*scl->size);
+	subcommandlist=scl;
 	
 	foreach_pathlist(getenv(COMMANDS_PATH), scandir_add_to_subcommandlist, scl);
-	return scl;
 }
 
-void subcommand_list_free(subcommand_list_t *scl){
+void subcommand_list_free(){
+	subcommand_list_t *scl=subcommandlist;
+	if (!scl)
+		return;
 	int i;
 	for(i=0;i<scl->count;i++){
 		free(scl->list[i].name);
@@ -67,15 +85,17 @@ void subcommand_list_free(subcommand_list_t *scl){
 	}
 	free(scl->list);
 	free(scl);
+	subcommandlist=NULL;
 }
 
 /// Adds a subcommand to the list. Avoid dups based on name.
-subcommand_t *subcommand_list_add(subcommand_list_t *scl, const char *name, const char *fullpath){
-	subcommand_t *I=scl->list, *endI=scl->list+scl->count;
+subcommand_t *subcommand_list_add(const char *name, const char *fullpath){
+	subcommand_t *I=subcommand_list_begin(), *endI=subcommand_list_end();
 	for(;I!=endI;++I){
 		if (strcmp(I->name, name)==0)
 			return I;
 	}
+	subcommand_list_t *scl=subcommandlist;
 	if (scl->size < scl->count+1){
 		scl->size+=8;
 		scl->list=realloc(scl->list, sizeof(subcommand_t)*scl->size);
@@ -99,7 +119,6 @@ int scandir_startswith_command_name(const struct dirent *d){
 }
 
 void scandir_add_to_subcommandlist(void *l, const char *dirname){
-	subcommand_list_t *scl=l;
 	struct dirent **namelist;
 
 	int n=scandir(dirname, &namelist, scandir_startswith_command_name, alphasort);
@@ -112,7 +131,7 @@ void scandir_add_to_subcommandlist(void *l, const char *dirname){
 		snprintf(tmp, sizeof(tmp), "%s/%s", dirname, namelist[n]->d_name);
 		if (stat(tmp, &st) >= 0){
 			if (st.st_mode & 0111) // Excutable for anybody.
-				subcommand_list_add(scl, namelist[n]->d_name+command_name_length+1, tmp);
+				subcommand_list_add(namelist[n]->d_name+command_name_length+1, tmp);
 		}
 		free(namelist[n]);
 	}
@@ -140,30 +159,18 @@ int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char 
 	return 0;
 }
 
-void list_subcommands_list(){
-	subcommand_list_t *sbl=subcommand_list_new();
-	subcommand_t *I=sbl->list;
-	subcommand_t *endI=sbl->list+sbl->count;
-	for(;I!=endI;++I){
-		printf("%s ", I->name);
-	}
-	subcommand_list_free(sbl);
+subcommand_t *subcommand_list_begin(){
+	subcommand_list_init();
+	return subcommandlist->list;
+}
+subcommand_t *subcommand_list_end(){
+	return subcommandlist->list+subcommandlist->count;
 }
 
-void list_subcommands_one_line_help(){
-	subcommand_list_t *sbl=subcommand_list_new();
-	char tmp[1024];
-	subcommand_t *I=sbl->list;
-	subcommand_t *endI=sbl->list+sbl->count;
-	for(;I!=endI;++I){
-		snprintf(tmp, sizeof(tmp), "%s --one-line-help", I->fullpath);
-		printf("  %8s - ", I->name);
-		fflush(stdout);
-		system(tmp);
-	}
-	
-	subcommand_list_free(sbl);
-}
+/**
+ * @}
+ */
+
 
 
 const char *string_trim(char *str){
@@ -315,9 +322,8 @@ void parse_config(){
 
 char *find_command(const char *name){
 	char *ret=NULL;
-	subcommand_list_t *scl=subcommand_list_new();
 	
-	subcommand_t *I=scl->list, *endI=scl->list+scl->count;
+	subcommand_t *I=subcommand_list_begin(), *endI=subcommand_list_end();
 	for(;I!=endI;++I){
 		if (strcmp(I->name, name)==0){
 			ret=strdup(I->fullpath);
@@ -325,8 +331,28 @@ char *find_command(const char *name){
 		}
 	}
 	
-	subcommand_list_free(scl);
 	return ret;
+}
+
+
+void list_subcommands_list(){
+	subcommand_t *I=subcommand_list_begin();
+	subcommand_t *endI=subcommand_list_end();
+	for(;I!=endI;++I){
+		printf("%s ", I->name);
+	}
+}
+
+void list_subcommands_one_line_help(){
+	char tmp[1024];
+	subcommand_t *I=subcommand_list_begin();
+	subcommand_t *endI=subcommand_list_end();
+	for(;I!=endI;++I){
+		snprintf(tmp, sizeof(tmp), "%s --one-line-help", I->fullpath);
+		printf("  %8s - ", I->name);
+		fflush(stdout);
+		system(tmp);
+	}
 }
 
 /**** PUBLIC API ****/
@@ -386,37 +412,35 @@ int commands_main(int argc, char **argv){
 	setenv("COMMANDS_NAME", command_name, 1);
 	
 	parse_config();
+	int retcode=0;
 	
 	if (argc==1){
 		help();
-		return 0;
 	}
 	else{
 #ifdef ONE_LINE_HELP
 		if (strcmp(argv[1], "--one-line-help")==0){
 			printf("%s\n", ONE_LINE_HELP);
-			return 0;
-		}
+		} else
 #endif
 #ifdef VERSION
 		if (strcmp(argv[1], "--version")==0 || strcmp(argv[1], "-v")==0){
 			printf("%s %s\n", command_name, VERSION);
-			return 0;
-		}
+		} else
 #endif
 		if (strcmp(argv[1], "--list")==0){
 			list();
-			return 0;
 		}
-		if (strcmp(argv[1], "--help")==0){
+		else if (strcmp(argv[1], "--help")==0){
 			help();
-			return 0;
 		}
-		return run_command(argv[1], argc-1, argv+1);
+		else{
+			retcode=run_command(argv[1], argc-1, argv+1);
+		}
 	}
 	
-	
-	return 0;
+	subcommand_list_free(subcommandlist);
+	return retcode;
 }
 
 #ifndef NO_MAIN
