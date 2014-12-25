@@ -90,6 +90,8 @@ subcommand_t *subcommand_list_add(subcommand_list_t *scl, const char *name, cons
 
 int scandir_startswith_command_name(const struct dirent *d){
 // 	printf("Check %s %d %s %ld\n",d->d_name, strncmp(d->d_name, command_name, command_name_length), command_name, command_name_length);
+	if (d->d_name[strlen(d->d_name)-1]=='~')
+		return 0;
 	return 
 		(strncmp(d->d_name, command_name, command_name_length)==0) && 
 		d->d_name[command_name_length]=='-' &&
