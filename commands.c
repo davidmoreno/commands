@@ -315,7 +315,7 @@ char *find_command(const char *name){
 	char *ret=NULL;
 	subcommand_list_t *scl=subcommand_list_new();
 	
-	subcommand_t *I=scl->list, *endI=scl->list+scl->size;
+	subcommand_t *I=scl->list, *endI=scl->list+scl->count;
 	for(;I!=endI;++I){
 		if (strcmp(I->name, name)==0){
 			ret=strdup(I->fullpath);
@@ -334,6 +334,9 @@ char *find_command(const char *name){
  */
 void help(){
 	printf("%s <subcommand> ...\n\n", command_name);
+#ifdef PREAMBLE
+	printf("%s\n\n", PREAMBLE);
+#endif
 	printf("Known subcommands are:\n");
 	list_subcommands_one_line_help();
 	printf("\n");
@@ -390,6 +393,12 @@ int commands_main(int argc, char **argv){
 #ifdef ONE_LINE_HELP
 		if (strcmp(argv[1], "--one-line-help")==0){
 			printf("%s\n", ONE_LINE_HELP);
+			return 0;
+		}
+#endif
+#ifdef VERSION
+		if (strcmp(argv[1], "--version")==0 || strcmp(argv[1], "-v")==0){
+			printf("%s %s\n", command_name, VERSION);
 			return 0;
 		}
 #endif

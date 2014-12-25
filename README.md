@@ -58,7 +58,9 @@ If these definitions are present, they may set default values:
   of PATH nor whatever is set at the config file.
 * **ONE_LINE_HELP** -- Subcommands can be chained, but the --one-line-help must be 
   provided for subcommands.
-* **NO_MAIN** -- Does not compile default main, so it can be customized, calling commands_main or custom functions.
+* **NO_MAIN**  -- Does not compile default main, so it can be customized, calling commands_main or custom functions.
+* **PREAMBLE** -- Text to printf when helpis shown, as some introduction to the command.
+* **VERSION**  -- Version to show if --version is called. 
 
 ## Environment vars
 
