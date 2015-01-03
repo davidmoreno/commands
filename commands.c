@@ -39,6 +39,7 @@ typedef enum{
 	SC_INTERNAL, ///< Call a internal function, do next.
 	SC_INTERNAL_1, ///< Call a internal function with an argument, do next.
 	SC_EXPORT_ENV, ///< Export an environment and do next.
+	SC_INTERNAL_ARGS, ///< Call an internal function with arguments.
 }subcommand_type_e;
 
 typedef struct subcommand_t{
@@ -47,6 +48,7 @@ typedef struct subcommand_t{
 	union{
 		char *fullpath;
 		void (*f)();
+		int (*f_with_args)(int argc, char **argv);
 		struct{
 			void (*f_with_data)();
 			void *f_data;
@@ -83,6 +85,7 @@ subcommand_t *subcommand_list_begin();
 subcommand_t *subcommand_list_end();
 void help();
 void list();
+int _which(int argc, char **argv);
 
 int subcommand_cmp(subcommand_t *a, subcommand_t *b){
 	return strcmp(a->name, b->name);
@@ -101,6 +104,7 @@ void subcommand_list_init(){
 		subcommand_t toins[]={
 			{ .name="help", .type=SC_INTERNAL, .f=help, .one_line_help="Show help" },
 			{ .name="--list", .type=SC_INTERNAL, .f=list, .one_line_help="Shows list of all commands and arguments" },
+			{ .name="--which", .type=SC_INTERNAL_ARGS, .f_with_args=_which, .one_line_help="Prints full path of the given commands" },
 #ifdef VERSION
 			{ .name="--version", .type=SC_INTERNAL_1, .f_with_data=(void*)puts, .f_data=VERSION, .one_line_help="Shows current version" },
 #endif
@@ -174,6 +178,9 @@ subcommand_t *subcommand_list_add(subcommand_t *command){
 		case SC_INTERNAL_1:
 			I->f_with_data=command->f_with_data;
 			I->f_data=command->f_data;
+			break;
+		case SC_INTERNAL_ARGS:
+			I->f_with_args=command->f_with_args;
 			break;
 	}
 	if (command->one_line_help)
@@ -485,20 +492,40 @@ void list(){
 	printf("\n");
 }
 
+int _which(int argc, char **argv){
+	if (argc<2){
+		fprintf(stderr,"Please state command to get full path\n");
+		return -1;
+	}
+	subcommand_t *I=find_command(argv[1]);
+	if (I){
+		if (I->type!=SC_EXTERNAL){
+			fprintf(stderr,"[This is an internal command]\n");
+			return 1;
+		}
+		puts(I->fullpath);
+		return 1;
+	}
+	fprintf(stderr,"Command not found\n");
+	return -1;
+}
+
 /**
  * @short Runs a specific subcommand, replacing current process (exec).
+ * 
+ * @returns Number of arguments consumed, 0 to stop execution, and <0 for errors.
  */
 int run_command(const char *subcommand, int argc, char **argv){
 	subcommand_t *command=find_command(subcommand);
 	if (!command){
 		fprintf(stderr,"Command %s not found. Check available running %s without arguments.\n", subcommand, command_name);
-		return 1;
+		return -1;
 	}
 	switch(command->type){
 	case SC_EXTERNAL:
 		execv(command->fullpath, argv);
 		perror("Could not execute subcommand: ");
-		return 1;
+		return -1;
 		break;
 	case SC_INTERNAL:
 		command->f();
@@ -508,9 +535,13 @@ int run_command(const char *subcommand, int argc, char **argv){
 			setenv(command->env_name, command->env_value, 1);
 		else
 			setenv(command->env_name, "1", 1);
+		return 1;
 		break;
 	case SC_INTERNAL_1:
 		command->f_with_data(command->f_data);
+		break;
+	case SC_INTERNAL_ARGS:
+		return command->f_with_args(argc, argv);
 		break;
 	default:
 		fprintf(stderr, "Unknown command type %d", command->type);
@@ -547,10 +578,11 @@ int commands_main(int argc, char **argv){
 	else{
 		while(argc>1){
 			retcode=run_command(argv[1], argc-1, argv+1);
-			if (retcode!=0)
+			if (retcode<=0)
 				break;
-			argc--;
-			argv++;
+			retcode++; // Always consume one more.
+			argc-=retcode;
+			argv+=retcode;
 		}
 	}
 	
