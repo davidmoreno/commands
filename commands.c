@@ -34,9 +34,29 @@ char *command_name=NULL;
 size_t command_name_length=0;
 const char *COMMANDS_PATH="COMMANDS_PATH";
 
+typedef enum{
+	SC_EXTERNAL, ///< Exec a external command
+	SC_INTERNAL, ///< Call a internal function, do next.
+	SC_INTERNAL_1, ///< Call a internal function with an argument, do next.
+	SC_EXPORT_ENV, ///< Export an environment and do next.
+}subcommand_type_e;
+
 typedef struct subcommand_t{
 	char *name;
-	char *fullpath;
+	subcommand_type_e type;
+	union{
+		char *fullpath;
+		void (*f)();
+		struct{
+			void (*f_with_data)();
+			void *f_data;
+		};
+		struct{
+			char *env_name;
+			char *env_value; ///< Set to NULL to export the arguments argument. --export=value
+		};
+	};
+	char *one_line_help;
 }subcommand_t;
 
 typedef struct subcommand_list_t{
@@ -57,10 +77,16 @@ subcommand_list_t *subcommandlist=NULL;
  */
 subcommand_list_t *subcommand_list_new();
 int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char *path), void *userdata);
-subcommand_t *subcommand_list_add(const char *name, const char *fullpath);
+subcommand_t *subcommand_list_add(subcommand_t *toins);
 void scandir_add_to_subcommandlist(void *l, const char *dirname);
 subcommand_t *subcommand_list_begin();
 subcommand_t *subcommand_list_end();
+void help();
+void list();
+
+int subcommand_cmp(subcommand_t *a, subcommand_t *b){
+	return strcmp(a->name, b->name);
+}
 
 void subcommand_list_init(){
 	if (subcommandlist)
@@ -71,17 +97,45 @@ void subcommand_list_init(){
 	scl->list=malloc(sizeof(subcommand_t)*scl->size);
 	subcommandlist=scl;
 	
+	{
+		subcommand_t toins[]={
+			{ .name="help", .type=SC_INTERNAL, .f=help, .one_line_help="Show help" },
+			{ .name="--list", .type=SC_INTERNAL, .f=list, .one_line_help="Shows list of all commands and arguments" },
+#ifdef VERSION
+			{ .name="--version", .type=SC_INTERNAL_1, .f_with_data=(void*)puts, .f_data=VERSION, .one_line_help="Shows current version" },
+#endif
+#ifdef ONE_LINE_HELP
+			{ .name="--one-line-help", .type=SC_INTERNAL_1, .f_with_data=(void*)puts, .f_data=ONE_LINE_HELP, .one_line_help="Shows one line help" },
+#endif
+			{ .name=NULL }
+		};
+		subcommand_t *I=toins;
+		while(I->name){
+			subcommand_list_add(I);
+			++I;
+		}
+	}
+	
+#ifdef PRE_INIT_F
+	PRE_INIT_F();
+#endif
+	
 	foreach_pathlist(getenv(COMMANDS_PATH), scandir_add_to_subcommandlist, scl);
+	
+	qsort(scl->list, scl->count, sizeof(subcommand_t), (void*)subcommand_cmp);
 }
 
 void subcommand_list_free(){
 	subcommand_list_t *scl=subcommandlist;
 	if (!scl)
 		return;
-	int i;
-	for(i=0;i<scl->count;i++){
-		free(scl->list[i].name);
-		free(scl->list[i].fullpath);
+	subcommand_t *I=subcommand_list_begin(), *endI=subcommand_list_end();
+	for(;I!=endI;++I){
+		free(I->name);
+		if (I->type==SC_EXTERNAL || I->type==SC_EXPORT_ENV)
+			free(I->fullpath);
+		if (I->one_line_help)
+			free(I->one_line_help);
 	}
 	free(scl->list);
 	free(scl);
@@ -89,10 +143,10 @@ void subcommand_list_free(){
 }
 
 /// Adds a subcommand to the list. Avoid dups based on name.
-subcommand_t *subcommand_list_add(const char *name, const char *fullpath){
+subcommand_t *subcommand_list_add(subcommand_t *command){
 	subcommand_t *I=subcommand_list_begin(), *endI=subcommand_list_end();
 	for(;I!=endI;++I){
-		if (strcmp(I->name, name)==0)
+		if (strcmp(I->name, command->name)==0)
 			return I;
 	}
 	subcommand_list_t *scl=subcommandlist;
@@ -100,9 +154,32 @@ subcommand_t *subcommand_list_add(const char *name, const char *fullpath){
 		scl->size+=8;
 		scl->list=realloc(scl->list, sizeof(subcommand_t)*scl->size);
 	}
-	I=scl->list+scl->count;
-	I->name=strdup(name);
-	I->fullpath=strdup(fullpath);
+	I=subcommand_list_end();
+	I->name=strdup(command->name);
+	I->type=command->type;
+	switch(I->type){
+		case SC_EXTERNAL:
+			I->fullpath=strdup(command->fullpath);
+			break;
+		case SC_EXPORT_ENV:
+			I->env_name=strdup(command->env_name);
+			if (command->env_name)
+				I->env_value=strdup(command->env_value);
+			else
+				I->env_value=NULL;
+			break;
+		case SC_INTERNAL:
+			I->f=command->f;
+			break;
+		case SC_INTERNAL_1:
+			I->f_with_data=command->f_with_data;
+			I->f_data=command->f_data;
+			break;
+	}
+	if (command->one_line_help)
+		I->one_line_help=strdup(command->one_line_help);
+	else
+		I->one_line_help=NULL;
 	scl->count++;
 	
 	return I;
@@ -123,15 +200,23 @@ void scandir_add_to_subcommandlist(void *l, const char *dirname){
 
 	int n=scandir(dirname, &namelist, scandir_startswith_command_name, alphasort);
 	if (n<0){
-		perror("Cant scan dir in path: ");
+		fprintf(stderr, "Cant scan dir in path: <%s>",dirname);
+		perror(":");
+		return;
 	}
 	char tmp[1024];
 	struct stat st;
 	while (n--) {
 		snprintf(tmp, sizeof(tmp), "%s/%s", dirname, namelist[n]->d_name);
 		if (stat(tmp, &st) >= 0){
-			if (st.st_mode & 0111) // Excutable for anybody.
-				subcommand_list_add(namelist[n]->d_name+command_name_length+1, tmp);
+			if (st.st_mode & 0111){ // Excutable for anybody.
+				subcommand_t toins;
+				toins.name=namelist[n]->d_name+command_name_length+1;
+				toins.type=SC_EXTERNAL;
+				toins.fullpath=tmp;
+				toins.one_line_help=NULL;
+				subcommand_list_add(&toins);
+			}
 		}
 		free(namelist[n]);
 	}
@@ -331,13 +416,13 @@ void config_parse(){
 
 /// @{ @name Public API
 
-char *find_command(const char *name){
-	char *ret=NULL;
+subcommand_t *find_command(const char *name){
+	subcommand_t *ret=NULL;
 	
 	subcommand_t *I=subcommand_list_begin(), *endI=subcommand_list_end();
 	for(;I!=endI;++I){
 		if (strcmp(I->name, name)==0){
-			ret=strdup(I->fullpath);
+			ret=I;
 			break;
 		}
 	}
@@ -358,11 +443,25 @@ void list_subcommands_one_line_help(){
 	char tmp[1024];
 	subcommand_t *I=subcommand_list_begin();
 	subcommand_t *endI=subcommand_list_end();
+	int mode=0; // 0 is arguments, 1 is commands
+	printf("Known arguments are:\n");
 	for(;I!=endI;++I){
-		snprintf(tmp, sizeof(tmp), "%s --one-line-help", I->fullpath);
-		printf("  %8s - ", I->name);
+		if (mode==0 && I->name[0]!='-'){
+			mode=1;
+			printf("\nKnown commands are:\n");
+		}
+		printf("  %16s - ", I->name);
 		fflush(stdout);
-		system(tmp);
+		switch(I->type){
+			case SC_EXTERNAL:
+				snprintf(tmp, sizeof(tmp), "%s --one-line-help", I->fullpath);
+				system(tmp);
+				break;
+			default:
+				if (I->one_line_help)
+					printf("%s\n",  I->one_line_help);
+				break;
+		}
 	}
 }
 
@@ -370,11 +469,10 @@ void list_subcommands_one_line_help(){
  * @short Shows the list of subcommands with the one line help of each.
  */
 void help(){
-	printf("%s <subcommand> ...\n\n", command_name);
+	printf("%s <arguments|command> ...\n\n", command_name);
 #ifdef PREAMBLE
 	printf("%s\n\n", PREAMBLE);
 #endif
-	printf("Known subcommands are:\n");
 	list_subcommands_one_line_help();
 	printf("\n");
 }
@@ -391,15 +489,35 @@ void list(){
  * @short Runs a specific subcommand, replacing current process (exec).
  */
 int run_command(const char *subcommand, int argc, char **argv){
-	char *subcommand_path=find_command(subcommand);
-	if (!subcommand_path){
+	subcommand_t *command=find_command(subcommand);
+	if (!command){
 		fprintf(stderr,"Command %s not found. Check available running %s without arguments.\n", subcommand, command_name);
 		return 1;
 	}
-	execv(subcommand_path, argv);
-	free(subcommand_path); // Dont say I'm not clean.
-	perror("Could not execute subcommand: ");
-	return 1;
+	switch(command->type){
+	case SC_EXTERNAL:
+		execv(command->fullpath, argv);
+		perror("Could not execute subcommand: ");
+		return 1;
+		break;
+	case SC_INTERNAL:
+		command->f();
+		break;
+	case SC_EXPORT_ENV:
+		if (command->env_value)
+			setenv(command->env_name, command->env_value, 1);
+		else
+			setenv(command->env_name, "1", 1);
+		break;
+	case SC_INTERNAL_1:
+		command->f_with_data(command->f_data);
+		break;
+	default:
+		fprintf(stderr, "Unknown command type %d", command->type);
+		abort();
+		break;
+	}
+	return 0;
 }
 
 /**
@@ -427,24 +545,12 @@ int commands_main(int argc, char **argv){
 		help();
 	}
 	else{
-#ifdef ONE_LINE_HELP
-		if (strcmp(argv[1], "--one-line-help")==0){
-			printf("%s\n", ONE_LINE_HELP);
-		} else
-#endif
-#ifdef VERSION
-		if (strcmp(argv[1], "--version")==0 || strcmp(argv[1], "-v")==0){
-			printf("%s %s\n", command_name, VERSION);
-		} else
-#endif
-		if (strcmp(argv[1], "--list")==0){
-			list();
-		}
-		else if (strcmp(argv[1], "--help")==0){
-			help();
-		}
-		else{
+		while(argc>1){
 			retcode=run_command(argv[1], argc-1, argv+1);
+			if (retcode!=0)
+				break;
+			argc--;
+			argv++;
 		}
 	}
 	

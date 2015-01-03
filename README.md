@@ -61,6 +61,8 @@ If these definitions are present, they may set default values:
 * **NO_MAIN**  -- Does not compile default main, so it can be customized, calling commands_main or custom functions.
 * **PREAMBLE** -- Text to printf when helpis shown, as some introduction to the command.
 * **VERSION**  -- Version to show if --version is called. 
+* **PREINIT_F -- Function to call just before checking external directories for commands, to add internal ones.
+
 
 ## Environment vars
 
