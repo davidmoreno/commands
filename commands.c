@@ -83,9 +83,9 @@ subcommand_t *subcommand_list_add(subcommand_t *toins);
 void scandir_add_to_subcommandlist(void *l, const char *dirname);
 subcommand_t *subcommand_list_begin();
 subcommand_t *subcommand_list_end();
-void help();
-void list();
-int _which(int argc, char **argv);
+void commands_help();
+void commands_list();
+int commands_which(int argc, char **argv);
 
 int subcommand_cmp(subcommand_t *a, subcommand_t *b){
 	return strcmp(a->name, b->name);
@@ -102,9 +102,9 @@ void subcommand_list_init(){
 	
 	{
 		subcommand_t toins[]={
-			{ .name="help", .type=SC_INTERNAL, .f=help, .one_line_help="Show help" },
-			{ .name="--list", .type=SC_INTERNAL, .f=list, .one_line_help="Shows list of all commands and arguments" },
-			{ .name="--which", .type=SC_INTERNAL_ARGS, .f_with_args=_which, .one_line_help="Prints full path of the given commands" },
+			{ .name="help", .type=SC_INTERNAL, .f=commands_help, .one_line_help="Show help" },
+			{ .name="--list", .type=SC_INTERNAL, .f=commands_list, .one_line_help="Shows list of all commands and arguments" },
+			{ .name="--which", .type=SC_INTERNAL_ARGS, .f_with_args=commands_which, .one_line_help="Prints full path of the given commands" },
 #ifdef VERSION
 			{ .name="--version", .type=SC_INTERNAL_1, .f_with_data=(void*)puts, .f_data=VERSION, .one_line_help="Shows current version" },
 #endif
@@ -438,14 +438,6 @@ subcommand_t *find_command(const char *name){
 }
 
 
-void list_subcommands_list(){
-	subcommand_t *I=subcommand_list_begin();
-	subcommand_t *endI=subcommand_list_end();
-	for(;I!=endI;++I){
-		printf("%s ", I->name);
-	}
-}
-
 void list_subcommands_one_line_help(){
 	char tmp[1024];
 	subcommand_t *I=subcommand_list_begin();
@@ -475,7 +467,7 @@ void list_subcommands_one_line_help(){
 /**
  * @short Shows the list of subcommands with the one line help of each.
  */
-void help(){
+void commands_help(){
 	printf("%s <arguments|command> ...\n\n", command_name);
 #ifdef PREAMBLE
 	printf("%s\n\n", PREAMBLE);
@@ -487,12 +479,16 @@ void help(){
 /**
  * @short Prints all known subcommands.
  */
-void list(){
-	list_subcommands_list();
+void commands_list(){
+	subcommand_t *I=subcommand_list_begin();
+	subcommand_t *endI=subcommand_list_end();
+	for(;I!=endI;++I){
+		printf("%s ", I->name);
+	}
 	printf("\n");
 }
 
-int _which(int argc, char **argv){
+int commands_which(int argc, char **argv){
 	if (argc<2){
 		fprintf(stderr,"Please state command to get full path\n");
 		return -1;
@@ -573,14 +569,14 @@ int commands_main(int argc, char **argv){
 	int retcode=0;
 	
 	if (argc==1){
-		help();
+		commands_help();
 	}
 	else{
 		while(argc>1){
 			retcode=run_command(argv[1], argc-1, argv+1);
 			if (retcode<=0)
 				break;
-			retcode++; // Always consume one more.
+			retcode++; // Always consume command name + whatever wants to consume run_command.
 			argc-=retcode;
 			argv+=retcode;
 		}

@@ -97,15 +97,6 @@ int main(int argc, char **argv){
 			margv[margc]=NULL;
 			if (strcmp(margv[0],"exit")==0)
 				running=0;
-			else if (strcmp(margv[0],"list")==0){
-				list();
-				printf("\n");
-			}
-			else if (strcmp(margv[0],"help")==0){
-				printf("Known subcommands:\n");
-				list_subcommands_one_line_help();
-				printf("\n");
-			}
 			else
 				run_command_no_exec(margv[0], margc, margv);
 		}
