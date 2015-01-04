@@ -512,9 +512,31 @@ int commands_which(int argc, char **argv){
  * @returns Number of arguments consumed, 0 to stop execution, and <0 for errors.
  */
 int run_command(const char *subcommand, int argc, char **argv){
+	if (subcommand[0]=='-'){
+		char *eq_pos=strchr(subcommand, '=');
+		if ( eq_pos ){ // If it has =, split there set as two first arguments, do again.
+			char *nargv[argc+1];
+			nargv[0]=strdup(subcommand);
+			nargv[0][eq_pos-subcommand]=0;
+			nargv[1]=&argv[0][eq_pos-subcommand+1];
+			int i;
+			for(i=1;i<argc;i++)
+				nargv[i+1]=argv[i];
+			
+			i=run_command(nargv[0], argc+1, nargv);
+			if (i>0)
+				i--;
+			free(nargv[0]);
+			return i;
+		}
+	}
+	
 	subcommand_t *command=find_command(subcommand);
 	if (!command){
-		fprintf(stderr,"Command %s not found. Check available running %s without arguments.\n", subcommand, command_name);
+		if (subcommand[0]=='-')
+			fprintf(stderr,"Invalid argument %s. Check available running %s without arguments.\n", subcommand, command_name);
+		else
+			fprintf(stderr,"Command %s not found. Check available running %s without arguments.\n", subcommand, command_name);
 		return -1;
 	}
 	switch(command->type){

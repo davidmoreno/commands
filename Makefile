@@ -1,6 +1,6 @@
 all: commands commands-shell
 
-CFLAGS=-O2 -Wall -Werror -D__DEBUG__ -g  -DVERSION='"1.0"'
+CFLAGS=-O2 -Wall -Werror -DVERSION='"1.0"'
 #-DDEFAULT_COMMANDS_PATH=\".\" -DPREAMBLE='"This is an example"' -DONE_LINE_HELP='"Help"'
 
 #
