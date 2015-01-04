@@ -497,10 +497,10 @@ int commands_which(int argc, char **argv){
 	if (I){
 		if (I->type!=SC_EXTERNAL){
 			fprintf(stderr,"[This is an internal command]\n");
-			return 1;
+			return 2;
 		}
 		puts(I->fullpath);
-		return 1;
+		return 2;
 	}
 	fprintf(stderr,"Command not found\n");
 	return -1;
@@ -509,9 +509,10 @@ int commands_which(int argc, char **argv){
 /**
  * @short Runs a specific subcommand, replacing current process (exec).
  * 
- * @returns Number of arguments consumed, 0 to stop execution, and <0 for errors.
+ * @returns Number of arguments consumed, 0 to stop execution, and <0 for errors. 1 means consume and continue.
  */
 int run_command(const char *subcommand, int argc, char **argv){
+// 	fprintf(stderr, "Run %s + %d args\n", subcommand, argc-1);
 	if (subcommand[0]=='-'){
 		char *eq_pos=strchr(subcommand, '=');
 		if ( eq_pos ){ // If it has =, split there set as two first arguments, do again.
@@ -522,6 +523,10 @@ int run_command(const char *subcommand, int argc, char **argv){
 			int i;
 			for(i=1;i<argc;i++)
 				nargv[i+1]=argv[i];
+
+// 			fprintf(stderr, "Split run:\n");
+// 			for(i=0;i<argc+1;i++)
+// 				fprintf(stderr, "  %s\n", nargv[i]);
 			
 			i=run_command(nargv[0], argc+1, nargv);
 			if (i>0)
@@ -559,14 +564,18 @@ int run_command(const char *subcommand, int argc, char **argv){
 		command->f_with_data(command->f_data);
 		break;
 	case SC_INTERNAL_ARGS:
-		return command->f_with_args(argc, argv);
+	{
+		int ret=command->f_with_args(argc, argv);
+// 		fprintf(stderr, "%s: %d\n", command->name, ret);
+		return ret;
 		break;
+	}
 	default:
 		fprintf(stderr, "Unknown command type %d", command->type);
 		abort();
 		break;
 	}
-	return 0;
+	return 1;
 }
 
 /**
@@ -594,15 +603,21 @@ int commands_main(int argc, char **argv){
 		commands_help();
 	}
 	else{
-		while(argc>1){
-			retcode=run_command(argv[1], argc-1, argv+1);
+		argv++;
+		argc--;
+		while(argc>0){
+			retcode=run_command(argv[0], argc, argv);
+// 			fprintf(stderr, "Args: %s %d: %d\n", argv[0], argc, retcode);
 			if (retcode<=0)
 				break;
-			retcode++; // Always consume command name + whatever wants to consume run_command.
 			argc-=retcode;
 			argv+=retcode;
 		}
 	}
+	if (retcode<0)
+		retcode=-retcode;
+	else
+		retcode=0;
 	
 	subcommand_list_free(subcommandlist);
 	return retcode;
