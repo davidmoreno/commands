@@ -51,6 +51,64 @@ int run_command_no_exec(const char *subcommand, int argc, char **argv){
 	}
 }
 
+/**
+ * @short Updates allowed commands acording to config file SHELL_WHITELIST and SHELL_BLACKLIST
+ * 
+ * First removes all not at whitelist, then all from blacklist.
+ * 
+ * A command with empty name (string length 0) is not valid. At end we really remove them.
+ */
+void update_allowed_commands(){
+	if (getenv("SHELL_WHITELIST")){
+		{ // Blacklist all.
+			subcommand_t *I=subcommand_list_begin(), *endI=subcommand_list_end();
+			for(;I!=endI;++I)
+				I->type|=SC_BLACKLISTED;
+		}
+		// Allow some.
+		char *whitelist=strdupa( getenv("SHELL_WHITELIST") );
+		char *I=whitelist, *endI=whitelist+strlen(whitelist);
+		while (*whitelist){
+			while (*whitelist && !isspace(*whitelist))
+				whitelist++;
+			*whitelist=0;
+			subcommand_t *command=find_command(I);
+			if (command){
+				fprintf(stderr,"Whitelist %s\n", command->name);
+				command->type&=~SC_BLACKLISTED; // Clear.
+			}
+			if (whitelist>=endI)
+				break;
+			whitelist++;
+			while (isspace(*whitelist)) whitelist++; // Advance to next.
+			I=whitelist;
+		}
+	}
+	
+	if (getenv("SHELL_BLACKLIST")){
+		char *blacklist=strdupa( getenv("SHELL_BLACKLIST") );
+		char *I=blacklist, *endI=blacklist+strlen(blacklist);
+		while (*blacklist){
+			while (*blacklist && !isspace(*blacklist))
+				blacklist++;
+			*blacklist=0;
+			subcommand_t *command=find_command(I);
+			if (command){
+				fprintf(stderr,"Blacklist %s\n", command->name);
+				command->type|=SC_BLACKLISTED;
+			}
+			if (blacklist>=endI)
+				break;
+			blacklist++;
+			while (isspace(*blacklist)) blacklist++; // Advance to next.
+			I=blacklist;
+		}
+	}
+	
+	
+	
+}
+
 int main(int argc, char **argv){
 	if (argc==2 && strcmp(argv[1],"--one-line-help")==0){
 		printf("Executes a restricted shell\n");
@@ -77,6 +135,8 @@ int main(int argc, char **argv){
 		command_name=strdup(command_name);
 	command_name_length=strlen(command_name);
 	config_parse();
+	
+	update_allowed_commands();
 	
 	int running=1;
 	char line[2048];

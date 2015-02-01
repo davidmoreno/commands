@@ -40,6 +40,11 @@ typedef enum{
 	SC_INTERNAL_1, ///< Call a internal function with an argument, do next.
 	SC_EXPORT_ENV, ///< Export an environment and do next.
 	SC_INTERNAL_ARGS, ///< Call an internal function with arguments.
+	
+	SC_NOHELP=64, ///< Do not show help for this command.
+	SC_BLACKLISTED=SC_NOHELP | 128, ///< Blacklisted flag. Commands blacklisted can not be run. These command do not show help.
+	
+	SC_TYPE_MASK=~SC_NOHELP,
 }subcommand_type_e;
 
 typedef struct subcommand_t{
@@ -103,8 +108,9 @@ void subcommand_list_init(){
 	{
 		subcommand_t toins[]={
 			{ .name="help", .type=SC_INTERNAL, .f=commands_help, .one_line_help="Show help" },
-			{ .name="--list", .type=SC_INTERNAL, .f=commands_list, .one_line_help="Shows list of all commands and arguments" },
-			{ .name="--which", .type=SC_INTERNAL_ARGS, .f_with_args=commands_which, .one_line_help="Prints full path of the given commands" },
+			{ .name="--help", .type=SC_INTERNAL | SC_NOHELP, .f=commands_help, .one_line_help="Show help" },
+			{ .name="--list", .type=SC_INTERNAL | SC_NOHELP, .f=commands_list, .one_line_help="Shows list of all commands and arguments" },
+			{ .name="--which", .type=SC_INTERNAL_ARGS | SC_NOHELP, .f_with_args=commands_which, .one_line_help="Prints full path of the given commands" },
 #ifdef VERSION
 			{ .name="--version", .type=SC_INTERNAL_1, .f_with_data=(void*)puts, .f_data=VERSION, .one_line_help="Shows current version" },
 #endif
@@ -161,7 +167,7 @@ subcommand_t *subcommand_list_add(subcommand_t *command){
 	I=subcommand_list_end();
 	I->name=strdup(command->name);
 	I->type=command->type;
-	switch(I->type){
+	switch(I->type & SC_TYPE_MASK){
 		case SC_EXTERNAL:
 			I->fullpath=strdup(command->fullpath);
 			break;
@@ -182,6 +188,8 @@ subcommand_t *subcommand_list_add(subcommand_t *command){
 		case SC_INTERNAL_ARGS:
 			I->f_with_args=command->f_with_args;
 			break;
+		default:
+			break; // Ignore BLACKLISTED. Actually here can not happen.
 	}
 	if (command->one_line_help)
 		I->one_line_help=strdup(command->one_line_help);
@@ -442,11 +450,17 @@ void list_subcommands_one_line_help(){
 	char tmp[1024];
 	subcommand_t *I=subcommand_list_begin();
 	subcommand_t *endI=subcommand_list_end();
-	int mode=0; // 0 is arguments, 1 is commands
-	printf("Known arguments are:\n");
+	int mode=0; // 0 nothing yet, 1 is arguments, 1 is commands
 	for(;I!=endI;++I){
-		if (mode==0 && I->name[0]!='-'){
+		if (I->type & SC_NOHELP) // Do not show help
+			continue;
+		
+		if (mode!=1 && I->name[0]=='-'){
 			mode=1;
+			printf("Known arguments are:\n");
+		}
+		if (mode!=2 && I->name[0]!='-'){
+			mode=2;
 			printf("\nKnown commands are:\n");
 		}
 		printf("  %16s - ", I->name);
@@ -468,9 +482,9 @@ void list_subcommands_one_line_help(){
  * @short Shows the list of subcommands with the one line help of each.
  */
 void commands_help(){
-	printf("%s <arguments|command> ...\n\n", command_name);
+	printf("%s <arguments|command> ...\n", command_name);
 #ifdef PREAMBLE
-	printf("%s\n\n", PREAMBLE);
+	printf("%s\n", PREAMBLE);
 #endif
 	list_subcommands_one_line_help();
 	printf("\n");
@@ -544,7 +558,7 @@ int run_command(const char *subcommand, int argc, char **argv){
 			fprintf(stderr,"Command %s not found. Check available running %s without arguments.\n", subcommand, command_name);
 		return -1;
 	}
-	switch(command->type){
+	switch(command->type & SC_TYPE_MASK){
 	case SC_EXTERNAL:
 		execv(command->fullpath, argv);
 		perror("Could not execute subcommand: ");
@@ -571,8 +585,13 @@ int run_command(const char *subcommand, int argc, char **argv){
 		break;
 	}
 	default:
-		fprintf(stderr, "Unknown command type %d", command->type);
-		abort();
+		if (! (command->type&SC_BLACKLISTED) ){
+			fprintf(stderr, "Unknown command type %d\n", command->type & SC_TYPE_MASK);
+			abort();
+		}
+		else{
+			fprintf(stderr, "Command %s is not allowed\n", command->name);
+		}
 		break;
 	}
 	return 1;

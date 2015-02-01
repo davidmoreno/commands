@@ -76,3 +76,20 @@ be called in this very same function.
 Internally the following environment vars are set
 
 * **COMMANDS_NAME** The name of the commands, required by subcommands to know real name.
+
+## commands shell
+
+Its possible to compile a limited shell of commands, using `commands-shell.c`. It will allow only use
+of this program commands (so security is actually on the commands side), and it also features a black
+and white list.
+
+Add the following variables to your config file:
+
+```
+SHELL_WHITELIST=...
+SHELL_BLACKLIST=...
+```
+
+Both are optional, and both are used if avaliable, if a command is in both list it will not be allowed.
+
+Careful that arguments (--help) are also commands, although normally internal.
