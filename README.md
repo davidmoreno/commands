@@ -50,7 +50,9 @@ fi
 getent passwd | awk -F: '{ if ($7 == "/bin/bash") print $1; }'
 ```
 
-## Compile time configuration
+## Customizing commands
+
+### Compile time configuration
 
 If these definitions are present, they may set default values:
 
@@ -63,6 +65,11 @@ If these definitions are present, they may set default values:
 * **VERSION**  -- Version to show if --version is called. 
 * **PREINIT_F -- Function to call just before checking external directories for commands, to add internal ones.
 
+Using the preinit_f, its possible to add your own internal commands, which can be simple functions, or 
+full commands with its own args.
+
+Check how it done at subcommand_list_init. Yu must do something similar on your preinit_f, which will 
+be called in this very same function.
 
 ## Environment vars
 

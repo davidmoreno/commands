@@ -27,16 +27,28 @@
  * @short Runs a specific subcommand, NOT replacing current process.
  */
 int run_command_no_exec(const char *subcommand, int argc, char **argv){
-	pid_t pid;
-	if ( (pid=fork()) == 0){
-		run_command(subcommand, argc, argv);
+	subcommand_t *command=find_command(subcommand);
+	
+	if (!command){
+		fprintf(stderr, "Invalid command: %s\n", subcommand);
+		return -1;
 	}
-	int status=0;
-	waitpid(pid,&status,0);
-	if (!WIFEXITED(status)){
-		fprintf(stderr, "Error executing command %s.\n", subcommand);
+	if (command->type==SC_EXTERNAL){ // If external, will do execv, do fork here
+		pid_t pid;
+		if ( (pid=fork()) == 0){
+			run_command(subcommand, argc, argv);
+			exit(1); // If got here, command was not run properly.
+		}
+		int status=0;
+		waitpid(pid,&status,0);
+		if (!WIFEXITED(status)){
+			fprintf(stderr, "Error executing command %s.\n", subcommand);
+		}
+		return WEXITSTATUS(status);
 	}
-	return WEXITSTATUS(status);
+	else{ // If not, jsut run.
+		return run_command(subcommand, argc, argv);
+	}
 }
 
 int main(int argc, char **argv){
@@ -70,8 +82,9 @@ int main(int argc, char **argv){
 	char line[2048];
 	memset(line, 0, sizeof(line));
 	char *margv[256];
+	int64_t n=1;
 	while(running){
-		printf("%s> ", command_name);
+		printf("%s:%ld> ", command_name, n++);
 		fflush(stdout);
 		
 		memset(line, 0, sizeof(line));
@@ -95,8 +108,10 @@ int main(int argc, char **argv){
 				}
 			}
 			margv[margc]=NULL;
-			if (strcmp(margv[0],"exit")==0)
+			if (strcmp(margv[0],"exit")==0){
+				printf("Bye.\n");
 				running=0;
+			}
 			else
 				run_command_no_exec(margv[0], margc, margv);
 		}

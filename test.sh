@@ -27,6 +27,14 @@ function assert_eq(){
 		success "Assert" $1 == $2
 	fi
 }
+function assert_eq_stderr(){
+	local r1=`$1 2>&1`
+	if [ "$r1" != "$2" ]; then
+		fail "Assert" $1, $r1 == $2
+	else
+		success "Assert" $1 == $2
+	fi
+}
 
 function assert_ok(){
 	$* >/dev/null
@@ -56,6 +64,8 @@ assert_nok "./commands unknown"
 assert_eq "./commands example" "`./commands-example`"
 assert_eq "./commands example testing" "`./commands-example testing`"
 assert_eq "./commands example --one-line-help" "Just an example"
+assert_eq "./commands --version --which=help" "1.0"
+assert_eq_stderr "./commands --which=help" "[This is an internal command]"
 
 
 if [ "$ERROR" != "0" ]; then
