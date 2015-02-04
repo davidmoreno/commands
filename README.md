@@ -63,7 +63,9 @@ If these definitions are present, they may set default values:
 * **NO_MAIN**  -- Does not compile default main, so it can be customized, calling commands_main or custom functions.
 * **PREAMBLE** -- Text to printf when helpis shown, as some introduction to the command.
 * **VERSION**  -- Version to show if --version is called. 
-* **PREINIT_F -- Function to call just before checking external directories for commands, to add internal ones.
+* **PREINIT_F** -- Function to call just before checking external directories for commands, to add internal ones.
+* **COMMAND_NAME**  -- In some situations command name can not be autoguessed.
+* **CONFIG_FILE**   -- Path to default config file.
 
 Using the preinit_f, its possible to add your own internal commands, which can be simple functions, or 
 full commands with its own args.

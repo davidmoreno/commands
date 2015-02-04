@@ -415,6 +415,10 @@ error:
 /// Parses the config files
 void config_parse(){
 	char tmp[256];
+	
+#ifdef CONFIG_FILE
+	config_parse_file(CONFIG_FILE);
+#endif
 	snprintf(tmp, sizeof(tmp), "/etc/%s", command_name);
 	config_parse_file(tmp);
 	snprintf(tmp, sizeof(tmp), "%s/.config/%s", getenv("HOME"), command_name);
@@ -610,7 +614,11 @@ int commands_main(int argc, char **argv){
 	setenv(COMMANDS_PATH, secure_getenv("PATH"), 1);
 #endif
 	
+#ifdef COMMAND_NAME
+	command_name=COMMAND_NAME;
+#else
 	command_name=basename( argv[0] );
+#endif
 	command_name_length=strlen(command_name);
 	
 	setenv("COMMANDS_NAME", command_name, 1);

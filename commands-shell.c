@@ -123,7 +123,13 @@ int main(int argc, char **argv){
 	// Must be set at COMMANDS_NAME envvar.
 	command_name=getenv("COMMANDS_NAME");
 	if (!command_name){
-		char *tmp=strdup(argv[0]);
+		char *tmp;
+#ifdef COMMAND_NAME
+		tmp=strdup(COMMAND_NAME);
+#else
+		tmp==strdup(argv[0]);
+#endif
+		
 		command_name=strdup(basename(tmp));
 		free(tmp);
 		// Use first part of my own name
@@ -137,6 +143,11 @@ int main(int argc, char **argv){
 	config_parse();
 	
 	update_allowed_commands();
+
+	if (argc>1){ // May set one command as arguments.
+		run_command(argv[1], argc-1, argv+1);
+		exit(0);
+	}
 	
 	int running=1;
 	char line[2048];
