@@ -115,7 +115,7 @@ void subcommand_list_init(){
 			{ .name="--version", .type=SC_INTERNAL_1, .f_with_data=(void*)puts, .f_data=VERSION, .one_line_help="Shows current version" },
 #endif
 #ifdef ONE_LINE_HELP
-			{ .name="--one-line-help", .type=SC_INTERNAL_1, .f_with_data=(void*)puts, .f_data=ONE_LINE_HELP, .one_line_help="Shows one line help" },
+			{ .name="--one-line-help", .type=SC_INTERNAL_1 | SC_NOHELP, .f_with_data=(void*)puts, .f_data=ONE_LINE_HELP, .one_line_help="Shows one line help" },
 #endif
 			{ .name=NULL }
 		};
