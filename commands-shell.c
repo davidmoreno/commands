@@ -117,7 +117,7 @@ int main(int argc, char **argv){
 #ifdef DEFAULT_COMMANDS_PATH
 	setenv(COMMANDS_PATH, DEFAULT_COMMANDS_PATH, 1);
 #else
-	setenv(COMMANDS_PATH, secure_getenv("PATH"), 1);
+	setenv(COMMANDS_PATH, getenv("PATH"), 1);
 #endif
 	
 	// Must be set at COMMANDS_NAME envvar.

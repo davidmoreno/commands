@@ -66,6 +66,7 @@ If these definitions are present, they may set default values:
 * **PREINIT_F** -- Function to call just before checking external directories for commands, to add internal ones.
 * **COMMAND_NAME**  -- In some situations command name can not be autoguessed.
 * **CONFIG_FILE**   -- Path to default config file.
+* **DEBUG**    -- Compile extra debug utilities, as debug subcommand.
 
 Using the preinit_f, its possible to add your own internal commands, which can be simple functions, or 
 full commands with its own args.

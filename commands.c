@@ -95,7 +95,28 @@ int commands_which(int argc, char **argv);
 int subcommand_cmp(subcommand_t *a, subcommand_t *b){
 	return strcmp(a->name, b->name);
 }
+#ifdef DEBUG
+void commands_debug(){
+#ifdef CONFIG_FILE
+	printf("CONFIG_FILE_0=%s\n", CONFIG_FILE);
+#endif
+	char tmp[1024];
+	snprintf(tmp, sizeof(tmp), "/etc/%s", command_name);
+	printf("CONFIG_FILE_1=%s\n", tmp);
+	snprintf(tmp, sizeof(tmp), "%s/.config/%s", getenv("HOME"), command_name);
+	printf("CONFIG_FILE_2=%s\n", tmp);
+	snprintf(tmp, sizeof(tmp), "./%src", command_name);
+	printf("CONFIG_FILE_3=%s\n", tmp);
 
+	
+	#ifdef DEFAULT_COMMANDS_PATH
+	printf("DEFAULT_COMMANDS_PATH=%s\n", DEFAULT_COMMANDS_PATH);
+#endif
+	printf("COMMANDS_PATH=%s\n", getenv(COMMANDS_PATH));
+	printf("command_name=%s\n", command_name);
+	printf("command_length=%ld\n", command_name_length);
+}
+#endif
 void subcommand_list_init(){
 	if (subcommandlist)
 		return;
@@ -116,6 +137,9 @@ void subcommand_list_init(){
 #endif
 #ifdef ONE_LINE_HELP
 			{ .name="--one-line-help", .type=SC_INTERNAL_1 | SC_NOHELP, .f_with_data=(void*)puts, .f_data=ONE_LINE_HELP, .one_line_help="Shows one line help" },
+#endif
+#ifdef DEBUG
+			{ .name="debug", .type=SC_INTERNAL, .f=commands_debug, .one_line_help="Shows debug information" },
 #endif
 			{ .name=NULL }
 		};
@@ -424,7 +448,7 @@ void config_parse(){
 	snprintf(tmp, sizeof(tmp), "%s/.config/%s", getenv("HOME"), command_name);
 	config_parse_file(tmp);
 
-#ifdef __DEBUG__
+#ifdef DEBUG
 	snprintf(tmp, sizeof(tmp), "./%src", command_name);
 	config_parse_file(tmp);
 #endif
@@ -611,7 +635,7 @@ int commands_main(int argc, char **argv){
 #ifdef DEFAULT_COMMANDS_PATH
 	setenv(COMMANDS_PATH, DEFAULT_COMMANDS_PATH, 1);
 #else
-	setenv(COMMANDS_PATH, secure_getenv("PATH"), 1);
+	setenv(COMMANDS_PATH, getenv("PATH"), 1);
 #endif
 	
 #ifdef COMMAND_NAME
