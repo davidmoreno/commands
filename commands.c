@@ -31,7 +31,7 @@
 #include <stdbool.h>
 
 char *command_name=NULL;
-size_t command_name_length=0;
+unsigned int command_name_length=0;
 const char *COMMANDS_PATH="COMMANDS_PATH";
 
 typedef enum{
@@ -114,7 +114,7 @@ void commands_debug(){
 #endif
 	printf("COMMANDS_PATH=%s\n", getenv(COMMANDS_PATH));
 	printf("command_name=%s\n", command_name);
-	printf("command_length=%ld\n", command_name_length);
+	printf("command_length=%d\n", command_name_length);
 }
 #endif
 void subcommand_list_init(){
