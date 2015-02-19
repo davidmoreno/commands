@@ -127,7 +127,7 @@ int main(int argc, char **argv){
 #ifdef COMMAND_NAME
 		tmp=strdup(COMMAND_NAME);
 #else
-		tmp==strdup(argv[0]);
+		tmp=strdup(argv[0]);
 #endif
 		
 		command_name=strdup(basename(tmp));
@@ -153,7 +153,7 @@ int main(int argc, char **argv){
 	char line[2048];
 	memset(line, 0, sizeof(line));
 	char *margv[256];
-	int64_t n=1;
+	unsigned long n=1;
 	while(running){
 		printf("%s:%ld> ", command_name, n++);
 		fflush(stdout);
