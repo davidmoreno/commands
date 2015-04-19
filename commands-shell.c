@@ -17,11 +17,14 @@
  * Change at free will.
  */
 
-#define NO_MAIN
+#define _GNU_SOURCE
 
-#include "commands.c"
 #include <sys/wait.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "libcommands.h"
 
 /**
  * @short Runs a specific subcommand, NOT replacing current process.
@@ -104,9 +107,6 @@ void update_allowed_commands(){
 			I=blacklist;
 		}
 	}
-	
-	
-	
 }
 
 int main(int argc, char **argv){
