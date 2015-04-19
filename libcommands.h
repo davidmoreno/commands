@@ -59,13 +59,14 @@ int run_command(const char *subcommand, int argc, char **argv);
 int commands_which(int argc, char **argv);
 void commands_list();
 void commands_help();
-subcommand_t *find_command(const char *name);
+subcommand_t *subcommand_find(const char *name);
 subcommand_t *subcommand_list_end();
 subcommand_t *subcommand_list_begin();
 subcommand_t *subcommand_list_add(subcommand_t *command);
 void subcommand_list_free();
 void subcommand_list_init();
 void commands_debug();
+void commands_config_parse();
 
 extern char *command_name;
 extern unsigned int command_name_length;

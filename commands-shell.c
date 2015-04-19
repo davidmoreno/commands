@@ -23,6 +23,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <ctype.h>
 
 #include "libcommands.h"
 
@@ -30,7 +32,7 @@
  * @short Runs a specific subcommand, NOT replacing current process.
  */
 int run_command_no_exec(const char *subcommand, int argc, char **argv){
-	subcommand_t *command=find_command(subcommand);
+	subcommand_t *command=subcommand_find(subcommand);
 	
 	if (!command){
 		fprintf(stderr, "Invalid command: %s\n", subcommand);
@@ -75,7 +77,7 @@ void update_allowed_commands(){
 			while (*whitelist && !isspace(*whitelist))
 				whitelist++;
 			*whitelist=0;
-			subcommand_t *command=find_command(I);
+			subcommand_t *command=subcommand_find(I);
 			if (command){
 				fprintf(stderr,"Whitelist %s\n", command->name);
 				command->type&=~SC_BLACKLISTED; // Clear.
@@ -95,7 +97,7 @@ void update_allowed_commands(){
 			while (*blacklist && !isspace(*blacklist))
 				blacklist++;
 			*blacklist=0;
-			subcommand_t *command=find_command(I);
+			subcommand_t *command=subcommand_find(I);
 			if (command){
 				fprintf(stderr,"Blacklist %s\n", command->name);
 				command->type|=SC_BLACKLISTED;
@@ -140,7 +142,7 @@ int main(int argc, char **argv){
 	else
 		command_name=strdup(command_name);
 	command_name_length=strlen(command_name);
-	config_parse();
+	commands_config_parse();
 	
 	update_allowed_commands();
 

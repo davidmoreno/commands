@@ -407,7 +407,7 @@ error:
 }
 
 /// Parses the config files
-void config_parse(){
+void commands_config_parse(){
 	char tmp[256];
 	
 #ifdef CONFIG_FILE
@@ -429,7 +429,7 @@ void config_parse(){
 
 /// @{ @name Public API
 
-subcommand_t *find_command(const char *name){
+subcommand_t *subcommand_find(const char *name){
 	subcommand_t *ret=NULL;
 	
 	subcommand_t *I=subcommand_list_begin(), *endI=subcommand_list_end();
@@ -505,7 +505,7 @@ int commands_which(int argc, char **argv){
 		fprintf(stderr,"Please state command to get full path\n");
 		return -1;
 	}
-	subcommand_t *I=find_command(argv[1]);
+	subcommand_t *I=subcommand_find(argv[1]);
 	if (I){
 		if (I->type!=SC_EXTERNAL){
 			fprintf(stderr,"[This is an internal command]\n");
@@ -548,7 +548,7 @@ int run_command(const char *subcommand, int argc, char **argv){
 		}
 	}
 	
-	subcommand_t *command=find_command(subcommand);
+	subcommand_t *command=subcommand_find(subcommand);
 	if (!command){
 		if (subcommand[0]=='-')
 			fprintf(stderr,"Invalid argument %s. Check available running %s without arguments.\n", subcommand, command_name);
@@ -617,7 +617,7 @@ int commands_main(int argc, char **argv){
 	
 	setenv("COMMANDS_NAME", command_name, 1);
 	
-	config_parse();
+	commands_config_parse();
 	int retcode=0;
 	
 	if (argc==1){

@@ -7,10 +7,10 @@ CFLAGS=-O2 -Wall -Werror -DVERSION='"1.0"'
 #
 # 
 
-commands-shell: commands-shell.c commands.c
-	${CC} commands-shell.c -o commands-shell ${CFLAGS}
+commands-shell: commands-shell.c libcommands.c
+	${CC} commands-shell.c libcommands.c -o commands-shell ${CFLAGS}
 
-commands: commands.c
+commands: commands.c libcommands.c
 
 clean:
 	rm commands
