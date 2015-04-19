@@ -99,3 +99,7 @@ SHELL_BLACKLIST=...
 Both are optional, and both are used if avaliable, if a command is in both list it will not be allowed.
 
 Careful that arguments (--help) are also commands, although normally internal.
+
+# biicode support
+
+You can use biicode to use commands in your project. It is the davidmoreno/commands block.
