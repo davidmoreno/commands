@@ -22,17 +22,8 @@
 /**
  * @short main is kept as simple as possile, to allow easy customization.
  * 
- * If you are customizing commands main, I recomend you create another file, with your command name, with some content as
- * 
- *   #define NO_MAIN
- *   #include "commands.c"
- * 
- *   int main(int argc, char **argv){
- *     ...
- *     commands_main(argc, argv);
- *   }
- * 
- * Or calling the one_line_help(), list() or run_command(commandname, argc-1, argv+1) at your will.
+ * Just call commands_main, or do your own calling commands_list() or 
+ * commands_run(commandname, argc-1, argv+1) at your will.
  */
 int main(int argc, char **argv){
 	return commands_main(argc, argv);
