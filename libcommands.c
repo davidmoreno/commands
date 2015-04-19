@@ -32,8 +32,8 @@
 
 #include "libcommands.h"
 
-char *command_name=NULL;
-unsigned int command_name_length=0;
+char *commands_name=NULL;
+unsigned int commands_name_length=0;
 const char *COMMANDS_PATH="COMMANDS_PATH";
 
 typedef struct subcommand_list_t{
@@ -71,11 +71,11 @@ void commands_debug(){
 	printf("CONFIG_FILE_0=%s\n", CONFIG_FILE);
 #endif
 	char tmp[1024];
-	snprintf(tmp, sizeof(tmp), "/etc/%s", command_name);
+	snprintf(tmp, sizeof(tmp), "/etc/%s", commands_name);
 	printf("CONFIG_FILE_1=%s\n", tmp);
-	snprintf(tmp, sizeof(tmp), "%s/.config/%s", getenv("HOME"), command_name);
+	snprintf(tmp, sizeof(tmp), "%s/.config/%s", getenv("HOME"), commands_name);
 	printf("CONFIG_FILE_2=%s\n", tmp);
-	snprintf(tmp, sizeof(tmp), "./%src", command_name);
+	snprintf(tmp, sizeof(tmp), "./%src", commands_name);
 	printf("CONFIG_FILE_3=%s\n", tmp);
 
 	
@@ -83,8 +83,8 @@ void commands_debug(){
 	printf("DEFAULT_COMMANDS_PATH=%s\n", DEFAULT_COMMANDS_PATH);
 #endif
 	printf("COMMANDS_PATH=%s\n", getenv(COMMANDS_PATH));
-	printf("command_name=%s\n", command_name);
-	printf("command_length=%d\n", command_name_length);
+	printf("commands_name=%s\n", commands_name);
+	printf("command_length=%d\n", commands_name_length);
 }
 #endif
 void subcommand_list_init(){
@@ -194,20 +194,20 @@ subcommand_t *subcommand_list_add(subcommand_t *command){
 	return I;
 }
 
-int scandir_startswith_command_name(const struct dirent *d){
-// 	printf("Check %s %d %s %ld\n",d->d_name, strncmp(d->d_name, command_name, command_name_length), command_name, command_name_length);
+int scandir_startswith_commands_name(const struct dirent *d){
+// 	printf("Check %s %d %s %ld\n",d->d_name, strncmp(d->d_name, commands_name, commands_name_length), commands_name, commands_name_length);
 	if (d->d_name[strlen(d->d_name)-1]=='~')
 		return 0;
 	return 
-		(strncmp(d->d_name, command_name, command_name_length)==0) && 
-		d->d_name[command_name_length]=='-' &&
+		(strncmp(d->d_name, commands_name, commands_name_length)==0) && 
+		d->d_name[commands_name_length]=='-' &&
 		d->d_type&0111;
 }
 
 void scandir_add_to_subcommandlist(void *l, const char *dirname){
 	struct dirent **namelist;
 
-	int n=scandir(dirname, &namelist, scandir_startswith_command_name, alphasort);
+	int n=scandir(dirname, &namelist, scandir_startswith_commands_name, alphasort);
 	if (n<0){
 		fprintf(stderr, "Cant scan dir in path: <%s>",dirname);
 		perror(":");
@@ -220,7 +220,7 @@ void scandir_add_to_subcommandlist(void *l, const char *dirname){
 		if (stat(tmp, &st) >= 0){
 			if (st.st_mode & 0111){ // Excutable for anybody.
 				subcommand_t toins;
-				toins.name=namelist[n]->d_name+command_name_length+1;
+				toins.name=namelist[n]->d_name+commands_name_length+1;
 				toins.type=SC_EXTERNAL;
 				toins.fullpath=tmp;
 				toins.one_line_help=NULL;
@@ -413,13 +413,13 @@ void commands_config_parse(){
 #ifdef CONFIG_FILE
 	config_parse_file(CONFIG_FILE);
 #endif
-	snprintf(tmp, sizeof(tmp), "/etc/%s", command_name);
+	snprintf(tmp, sizeof(tmp), "/etc/%s", commands_name);
 	config_parse_file(tmp);
-	snprintf(tmp, sizeof(tmp), "%s/.config/%s", getenv("HOME"), command_name);
+	snprintf(tmp, sizeof(tmp), "%s/.config/%s", getenv("HOME"), commands_name);
 	config_parse_file(tmp);
 
 #ifdef DEBUG
-	snprintf(tmp, sizeof(tmp), "./%src", command_name);
+	snprintf(tmp, sizeof(tmp), "./%src", commands_name);
 	config_parse_file(tmp);
 #endif
 
@@ -480,7 +480,7 @@ void list_subcommands_one_line_help(){
  * @short Shows the list of subcommands with the one line help of each.
  */
 void commands_help(){
-	printf("%s <arguments|command> ...\n", command_name);
+	printf("%s <arguments|command> ...\n", commands_name);
 #ifdef PREAMBLE
 	printf("%s\n", PREAMBLE);
 #endif
@@ -523,7 +523,7 @@ int commands_which(int argc, char **argv){
  * 
  * @returns Number of arguments consumed, 0 to stop execution, and <0 for errors. 1 means consume and continue.
  */
-int run_command(const char *subcommand, int argc, char **argv){
+int commands_run(const char *subcommand, int argc, char **argv){
 // 	fprintf(stderr, "Run %s + %d args\n", subcommand, argc-1);
 	if (subcommand[0]=='-'){
 		char *eq_pos=strchr(subcommand, '=');
@@ -540,7 +540,7 @@ int run_command(const char *subcommand, int argc, char **argv){
 // 			for(i=0;i<argc+1;i++)
 // 				fprintf(stderr, "  %s\n", nargv[i]);
 			
-			i=run_command(nargv[0], argc+1, nargv);
+			i=commands_run(nargv[0], argc+1, nargv);
 			if (i>0)
 				i--;
 			free(nargv[0]);
@@ -551,9 +551,9 @@ int run_command(const char *subcommand, int argc, char **argv){
 	subcommand_t *command=subcommand_find(subcommand);
 	if (!command){
 		if (subcommand[0]=='-')
-			fprintf(stderr,"Invalid argument %s. Check available running %s without arguments.\n", subcommand, command_name);
+			fprintf(stderr,"Invalid argument %s. Check available running %s without arguments.\n", subcommand, commands_name);
 		else
-			fprintf(stderr,"Command %s not found. Check available running %s without arguments.\n", subcommand, command_name);
+			fprintf(stderr,"Command %s not found. Check available running %s without arguments.\n", subcommand, commands_name);
 		return -1;
 	}
 	switch(command->type & SC_TYPE_MASK){
@@ -609,13 +609,13 @@ int commands_main(int argc, char **argv){
 #endif
 	
 #ifdef COMMAND_NAME
-	command_name=COMMAND_NAME;
+	commands_name=COMMAND_NAME;
 #else
-	command_name=basename( argv[0] );
+	commands_name=basename( argv[0] );
 #endif
-	command_name_length=strlen(command_name);
+	commands_name_length=strlen(commands_name);
 	
-	setenv("COMMANDS_NAME", command_name, 1);
+	setenv("COMMANDS_NAME", commands_name, 1);
 	
 	commands_config_parse();
 	int retcode=0;
@@ -627,7 +627,7 @@ int commands_main(int argc, char **argv){
 		argv++;
 		argc--;
 		while(argc>0){
-			retcode=run_command(argv[0], argc, argv);
+			retcode=commands_run(argv[0], argc, argv);
 // 			fprintf(stderr, "Args: %s %d: %d\n", argv[0], argc, retcode);
 			if (retcode<=0)
 				break;

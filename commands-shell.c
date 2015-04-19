@@ -31,7 +31,7 @@
 /**
  * @short Runs a specific subcommand, NOT replacing current process.
  */
-int run_command_no_exec(const char *subcommand, int argc, char **argv){
+int commands_run_no_exec(const char *subcommand, int argc, char **argv){
 	subcommand_t *command=subcommand_find(subcommand);
 	
 	if (!command){
@@ -41,7 +41,7 @@ int run_command_no_exec(const char *subcommand, int argc, char **argv){
 	if (command->type==SC_EXTERNAL){ // If external, will do execv, do fork here
 		pid_t pid;
 		if ( (pid=fork()) == 0){
-			run_command(subcommand, argc, argv);
+			commands_run(subcommand, argc, argv);
 			exit(1); // If got here, command was not run properly.
 		}
 		int status=0;
@@ -52,7 +52,7 @@ int run_command_no_exec(const char *subcommand, int argc, char **argv){
 		return WEXITSTATUS(status);
 	}
 	else{ // If not, jsut run.
-		return run_command(subcommand, argc, argv);
+		return commands_run(subcommand, argc, argv);
 	}
 }
 
@@ -123,8 +123,8 @@ int main(int argc, char **argv){
 #endif
 	
 	// Must be set at COMMANDS_NAME envvar.
-	command_name=getenv("COMMANDS_NAME");
-	if (!command_name){
+	commands_name=getenv("COMMANDS_NAME");
+	if (!commands_name){
 		char *tmp;
 #ifdef COMMAND_NAME
 		tmp=strdup(COMMAND_NAME);
@@ -132,22 +132,22 @@ int main(int argc, char **argv){
 		tmp=strdup(argv[0]);
 #endif
 		
-		command_name=strdup(basename(tmp));
+		commands_name=strdup(basename(tmp));
 		free(tmp);
 		// Use first part of my own name
-		char *dash=strchr(command_name,'-');
+		char *dash=strchr(commands_name,'-');
 		if (dash)
 			*dash=0;
 	}
 	else
-		command_name=strdup(command_name);
-	command_name_length=strlen(command_name);
+		commands_name=strdup(commands_name);
+	commands_name_length=strlen(commands_name);
 	commands_config_parse();
 	
 	update_allowed_commands();
 
 	if (argc>1){ // May set one command as arguments.
-		run_command(argv[1], argc-1, argv+1);
+		commands_run(argv[1], argc-1, argv+1);
 		exit(0);
 	}
 	
@@ -157,7 +157,7 @@ int main(int argc, char **argv){
 	char *margv[256];
 	unsigned long n=1;
 	while(running){
-		printf("%s:%ld> ", command_name, n++);
+		printf("%s:%ld> ", commands_name, n++);
 		fflush(stdout);
 		
 		memset(line, 0, sizeof(line));
@@ -186,11 +186,11 @@ int main(int argc, char **argv){
 				running=0;
 			}
 			else
-				run_command_no_exec(margv[0], margc, margv);
+				commands_run_no_exec(margv[0], margc, margv);
 		}
 	}
 	printf("\n");
 	subcommand_list_free();
-	free(command_name);
+	free(commands_name);
 	return 0;
 }
