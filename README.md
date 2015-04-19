@@ -4,8 +4,11 @@ With commands its trivial to create a git inspired
 program that use specialized subcommand binaries to perform specific tasks.
 
 Just compile the command.c into your custom command name, and it just works. 
-Subcommands have to comply with some conventions to it all fits, but all 
-convetions are very easy to comply even on bash scripts.
+Subcommands have to comply with some conventions so that all fits, but all 
+conventions are very easy to comply even on bash scripts.
+
+Commands is intended to be used by just compiling and change the binary name 
+for very simple commands, and to be extended as necesary for more complex ones.
 
 ## Advantages of commands over other git style subcommands.
 
@@ -69,14 +72,14 @@ If these definitions are present, they may set default values:
 * **DEBUG**    -- Compile extra debug utilities, as debug subcommand.
 
 Using the preinit_f, its possible to add your own internal commands, which can be simple functions, or 
-full commands with its own args.
+full commands with its own args. 
 
-Check how it done at subcommand_list_init. Yu must do something similar on your preinit_f, which will 
-be called in this very same function.
+Check how it done at [subcommand_list_init](https://github.com/davidmoreno/commands/blob/master/commands.c#L120). 
+You must do something similar on your preinit_f, which will be called in this very same function.
 
 ## Environment vars
 
-Internally the following environment vars are set
+Internally the following environment vars are set before calling your comamnd.
 
 * **COMMANDS_NAME** The name of the commands, required by subcommands to know real name.
 
