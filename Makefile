@@ -13,5 +13,5 @@ commands-shell: commands-shell.c libcommands.c
 commands: commands.c libcommands.c
 
 clean:
-	rm commands
+	rm commands commands-shell
 

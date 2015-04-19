@@ -52,17 +52,10 @@ subcommand_list_t *subcommandlist=NULL;
  * 
  * Prepares the lists of subcommands
  */
-subcommand_list_t *subcommand_list_new();
-int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char *path), void *userdata);
-subcommand_t *subcommand_list_add(subcommand_t *toins);
-void scandir_add_to_subcommandlist(void *l, const char *dirname);
-subcommand_t *subcommand_list_begin();
-subcommand_t *subcommand_list_end();
-void commands_help();
-void commands_list();
-int commands_which(int argc, char **argv);
+static int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char *path), void *userdata);
+static void scandir_add_to_subcommandlist(void *l, const char *dirname);
 
-int subcommand_cmp(subcommand_t *a, subcommand_t *b){
+static int subcommand_cmp(subcommand_t *a, subcommand_t *b){
 	return strcmp(a->name, b->name);
 }
 #ifdef DEBUG
@@ -194,7 +187,7 @@ subcommand_t *subcommand_list_add(subcommand_t *command){
 	return I;
 }
 
-int scandir_startswith_commands_name(const struct dirent *d){
+static int scandir_startswith_commands_name(const struct dirent *d){
 // 	printf("Check %s %d %s %ld\n",d->d_name, strncmp(d->d_name, commands_name, commands_name_length), commands_name, commands_name_length);
 	if (d->d_name[strlen(d->d_name)-1]=='~')
 		return 0;
@@ -204,7 +197,7 @@ int scandir_startswith_commands_name(const struct dirent *d){
 		d->d_type&0111;
 }
 
-void scandir_add_to_subcommandlist(void *l, const char *dirname){
+static void scandir_add_to_subcommandlist(void *l, const char *dirname){
 	struct dirent **namelist;
 
 	int n=scandir(dirname, &namelist, scandir_startswith_commands_name, alphasort);
@@ -232,7 +225,7 @@ void scandir_add_to_subcommandlist(void *l, const char *dirname){
 	free(namelist);
 }
 
-int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char *path), void *userdata){
+static int foreach_pathlist(const char *search_paths, void (*feach)(void *, const char *path), void *userdata){
 	char *paths=strdup(search_paths);;
 	char *path=paths;
 	while(*path){ // While some path left
@@ -269,7 +262,7 @@ subcommand_t *subcommand_list_end(){
 /**
  * @{ @name string utils
  */
-const char *string_trim(char *str){
+static const char *string_trim(char *str){
 	// Trim start
 	while (*str && isspace(*str)){
 		str++;
@@ -286,7 +279,7 @@ const char *string_trim(char *str){
 }
 
 /// Returns a new string with env ($ENV) variables resolved.
-char *string_envformat(const char *str){
+static char *string_envformat(const char *str){
 	size_t ressize=strlen(str)+512;
 	char *begin_res=malloc(ressize); // An estimation.. might be way wrong.
 	char *res=begin_res;
@@ -341,7 +334,7 @@ end:
 
 /// @{ @name Config management
 /// Parses a line of the config file
-int config_parse_line(char *line){
+static int config_parse_line(char *line){
 	char *comments=strchr(line, '#');
 	if (comments)
 		*comments=0;
@@ -362,7 +355,7 @@ int config_parse_line(char *line){
 	return 0;
 }
 
-int config_parse_file(const char *filename){
+static int config_parse_file(const char *filename){
 	int fd=open(filename, O_RDONLY);
 	if (fd<0)
 		return fd;
@@ -444,7 +437,7 @@ subcommand_t *subcommand_find(const char *name){
 }
 
 
-void list_subcommands_one_line_help(){
+static void list_subcommands_one_line_help(){
 	char tmp[1024];
 	subcommand_t *I=subcommand_list_begin();
 	subcommand_t *endI=subcommand_list_end();
