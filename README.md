@@ -1,19 +1,19 @@
 # Git Style Subcommands Done Right
 
-With commands its trivial to create a git inspired 
+With commands it's trivial to create a git-inspired 
 program that use specialized subcommand binaries to perform specific tasks.
 
 Just compile the command.c into your custom command name, and it just works. 
 Subcommands have to comply with some conventions so that all fits, but all 
-conventions are very easy to comply even on bash scripts.
+conventions are very easy to comply with, even on bash scripts.
 
-Commands is intended to be used by just compiling and change the binary name 
-for very simple commands, and to be extended as necesary for more complex ones.
+Commands is intended to be used by just compiling and changing the binary name 
+for very simple commands, or to be extended as necesary for more complex ones.
 
 ## Advantages of commands over other git style subcommands.
 
 I'm well aware of hemsman (https://github.com/mattmcmanus/node-helmsman) 
-and git-style-binaries(https://github.com/jashmenn/git-style-binaries) but both
+and git-style-binaries (https://github.com/jashmenn/git-style-binaries) but both
 are everything but unobtrusive by the minimal reason that they need a specific
 interpreter (node, ruby). Maybe there are other solutions that use python
 or similar, but with commands, its just one C file and conventions.
@@ -64,7 +64,7 @@ If these definitions are present, they may set default values:
 * **ONE_LINE_HELP** -- Subcommands can be chained, but the --one-line-help must be 
   provided for subcommands.
 * **NO_MAIN**  -- Does not compile default main, so it can be customized, calling commands_main or custom functions.
-* **PREAMBLE** -- Text to printf when helpis shown, as some introduction to the command.
+* **PREAMBLE** -- Text to printf when help is shown, as some introduction to the command.
 * **VERSION**  -- Version to show if --version is called. 
 * **PREINIT_F** -- Function to call just before checking external directories for commands, to add internal ones.
 * **COMMAND_NAME**  -- In some situations command name can not be autoguessed.
@@ -85,7 +85,7 @@ Internally the following environment vars are set before calling your comamnd.
 
 ## commands shell
 
-Its possible to compile a limited shell of commands, using `commands-shell.c`. It will allow only use
+It's possible to compile a limited shell of commands, using `commands-shell.c`. It will allow only use
 of this program commands (so security is actually on the commands side), and it also features a black
 and white list.
 
